@@ -46,7 +46,7 @@ def ask_question(question):
 
 
 # Step 1: Extract text from the PDF
-pdf_path = "ultimate_frisbee_rules.pdf"
+pdf_path = "Official-Rules-of-Ultimate-2024-2025.pdf"
 rules_text = extract_text_from_pdf(pdf_path)
 
 # Save the extracted text to a file
