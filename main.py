@@ -44,8 +44,12 @@ def main():
 
     # Step 3: Fine-Tune GPT-2
     model_name = "gpt2"
-    model = GPT2LMHeadModel.from_pretrained(model_name)
-    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    model = GPT2LMHeadModel.from_pretrained(model_name)  # this downloads and caches (across sessions) some files including the model
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)  # this also downloads and caches things
+
+    tokens_per_line = [tokenizer(line) for line in rules_text.split('\n')]
+    num_tokens_per_line = [len(tokens['input_ids']) for tokens in tokens_per_line]
+    assert max(num_tokens_per_line) <= tokenizer.model_max_length, 'The maximum number of tokens in a line is greater than the maximum number of tokens the model can handle.'
 
     fine_tune_model(model, tokenizer, rules_text)
 
