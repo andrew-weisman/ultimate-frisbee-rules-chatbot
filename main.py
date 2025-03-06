@@ -36,12 +36,16 @@ def fine_tune_model(model, tokenizer, rules_text):
 
     # For each line in the rules...
     for itokens, tokens in enumerate(tokens_per_line):
-        print(f'On line {itokens + 1} of {tot_num_tokens}: number of tokens: {len(tokens["input_ids"][0])}')
-        outputs = model(**tokens, labels=tokens["input_ids"])
-        loss = outputs.loss
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+        num_tokens = len(tokens["input_ids"][0])
+        print(f'On line {itokens + 1} of {tot_num_tokens}: number of tokens: {num_tokens}')
+        if num_tokens != 0:
+            outputs = model(**tokens, labels=tokens["input_ids"])
+            loss = outputs.loss
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+        else:
+            print('Skipping line because it is blank.')
 
 
 def retrieve_relevant_section(query, vectorizer, rules_vectors, rules_sections):
@@ -69,6 +73,9 @@ def main():
     model_name = "gpt2"
     model = GPT2LMHeadModel.from_pretrained(model_name)  # this downloads and caches (across sessions) some files including the model
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)  # this also downloads and caches things
+
+    # Explicitly set the model loss type.
+    config = model.config.loss_type = 'ForCausalLMLoss'  # set to the appropriate loss type if needed
 
     fine_tune_model(model, tokenizer, rules_text)
 
