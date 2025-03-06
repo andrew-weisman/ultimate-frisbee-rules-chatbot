@@ -12,13 +12,36 @@ def load_rules(file_path):
     return rules_text
 
 
+# Fine-tune the model using each line of the rules.
 def fine_tune_model(model, tokenizer, rules_text):
-    inputs = tokenizer(rules_text, return_tensors="pt", max_length=1024, truncation=True)
-    outputs = model(**inputs, labels=inputs["input_ids"])
-    loss = outputs.loss
-    loss.backward()
+
+    # Ensure the model is in training mode
+    model.train()
+
+    # Tokenize each line in the rules.
+    tokens_per_line = [tokenizer(line, return_tensors="pt") for line in rules_text.split('\n')]
+
+    # Get the number of tokens for each line of the rules.
+    num_tokens_per_line = [len(tokens['input_ids'][0]) for tokens in tokens_per_line]
+
+    # Ensure the model can handle every line.
+    model_max_length = tokenizer.model_max_length
+    assert max(num_tokens_per_line) <= model_max_length, 'The maximum number of tokens in all lines is greater than the maximum number of tokens the model can handle.'
+
+    # Get the total number of lines i.e. number of token sets.
+    tot_num_tokens = len(num_tokens_per_line)
+
+    # Initialize the optimizer.
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
-    optimizer.step()
+
+    # For each line in the rules...
+    for itokens, tokens in enumerate(tokens_per_line):
+        print(f'On line {itokens + 1} of {tot_num_tokens}: number of tokens: {len(tokens["input_ids"][0])}')
+        outputs = model(**tokens, labels=tokens["input_ids"])
+        loss = outputs.loss
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
 
 
 def retrieve_relevant_section(query, vectorizer, rules_vectors, rules_sections):
@@ -46,10 +69,6 @@ def main():
     model_name = "gpt2"
     model = GPT2LMHeadModel.from_pretrained(model_name)  # this downloads and caches (across sessions) some files including the model
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)  # this also downloads and caches things
-
-    tokens_per_line = [tokenizer(line) for line in rules_text.split('\n')]
-    num_tokens_per_line = [len(tokens['input_ids']) for tokens in tokens_per_line]
-    assert max(num_tokens_per_line) <= tokenizer.model_max_length, 'The maximum number of tokens in a line is greater than the maximum number of tokens the model can handle.'
 
     fine_tune_model(model, tokenizer, rules_text)
 
