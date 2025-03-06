@@ -15,11 +15,17 @@ def load_rules(file_path):
 # Fine-tune the model using each line of the rules.
 def fine_tune_model(model, tokenizer, rules_text):
 
+    # Determine the device to use.
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Ensure the model is on the selected device.
+    model.to(device)
+
     # Ensure the model is in training mode
     model.train()
 
     # Tokenize each line in the rules.
-    tokens_per_line = [tokenizer(line, return_tensors="pt") for line in rules_text.split('\n')]
+    tokens_per_line = [tokenizer(line, return_tensors="pt").to(device) for line in rules_text.split('\n')]
 
     # Get the number of tokens for each line of the rules.
     num_tokens_per_line = [len(tokens['input_ids'][0]) for tokens in tokens_per_line]
@@ -73,10 +79,6 @@ def main():
     model_name = "gpt2"
     model = GPT2LMHeadModel.from_pretrained(model_name)  # this downloads and caches (across sessions) some files including the model
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)  # this also downloads and caches things
-
-    # Explicitly set the model loss type.
-    config = model.config.loss_type = 'ForCausalLMLoss'  # set to the appropriate loss type if needed
-
     fine_tune_model(model, tokenizer, rules_text)
 
     # Step 4: Implement Retrieval Mechanism
