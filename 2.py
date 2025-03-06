@@ -22,6 +22,7 @@ def ask_question(model_name, question, context, use_gpu_if_available=True, mixed
     # Tokenize the input
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
 
+    # Determine the context to use for mixed precision
     context_to_use = torch.autocast("cuda") if mixed_precision and device.type == "cuda" else null_context()
 
     # Generate the answer with mixed precision
@@ -47,7 +48,7 @@ def ask_question(model_name, question, context, use_gpu_if_available=True, mixed
 # Example usage
 model_name = "EleutherAI/gpt-neo-2.7B"  # Change this to try different models
 use_gpu_if_available = False
-mixed_precision = False
+mixed_precision = True
 context = "Andrew's favorite color is violet."
 question = "What is Andrew's favorite color?"
 answer = ask_question(model_name, question, context, use_gpu_if_available, mixed_precision)
