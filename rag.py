@@ -7,7 +7,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer, util
 import logging
 import streamlit as st
-import datetime
+from datetime import datetime
 
 
 # Create handlers for logging.
@@ -41,6 +41,7 @@ def load_rules_from_file_to_string(file_path):
     except Exception as e:
         logging.error(f"Error loading rules from file: {e}")
         return ""
+
 
 # Get a list of non-blank lines from the rules.
 def preprocess_document(document):
@@ -94,14 +95,13 @@ def run_retriever(question, chunks, model_name, use_gpu_if_available=True, top_n
     return context
 
 
+# Assemble the prompt for the generator.
 def assemble_prompt(context, question):
 
-    if context is None:
-        return question
-
     # Combine context and question into a single prompt.
-    prompt = f"Context: {" ".join(context)}\nQuestion: {question}\nAnswer: "
+    prompt = f"Context: {' '.join(context)}\nQuestion: {question}\nAnswer: "
 
+    # Return the assembled prompt.
     return prompt
 
 
@@ -164,9 +164,11 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
 def main():
 
     # Parameters.
+    do_augmentation = False
     rules_filename = "ultimate_frisbee_rules-manual_copy_from_website-edited.txt"
+    question = "Andrew's favorite color is violet. What is Andrew's favorite color?"
     # question = "Explain the timeout rules"
-    question = "What is the stall count?"
+    # question = "What is the stall count?"
     retriever_model_name = 'all-MiniLM-L6-v2'
     generator_model_name = 'gpt2'
     # generator_model_name = 'gpt2-xl'  # this is the largest GPT-2 model from OpenAI and is open source
@@ -175,27 +177,31 @@ def main():
     top_k_for_retriever = 5
     use_gpu_if_available = True
     mixed_precision = False
-    load_in_4bit = False  # a bit faster for gpt-neo but sometimes gives wrong answers, sometimes repeats the question, but works pretty reliably for the simple example
+    load_in_4bit = False
     max_new_tokens = 10
     num_return_sequences = 1
     temperature = 0.3
     top_k_for_generator = 5
     do_sample = True
 
+    # If we want to create a RAG and therefore include relevant context in the prompt...
+    if do_augmentation:
+    
+        # Load the rules from a text file into a string.
+        rules_text = load_rules_from_file_to_string(rules_filename)
 
+        # Get a list of non-blank lines from the rules.
+        full_context_chunks = preprocess_document(rules_text)
 
-    # Load the rules from a text file into a string.
-    rules_text = load_rules_from_file_to_string(rules_filename)
+        # Run the retriever to obtain context for the prompt.
+        context = run_retriever(question, full_context_chunks, retriever_model_name, use_gpu_if_available=use_gpu_if_available, top_n=top_k_for_retriever)
 
-    # Get a list of non-blank lines from the rules.
-    full_context_chunks = preprocess_document(rules_text)
+        # Assemble the prompt for the generator.
+        prompt = assemble_prompt(context, question)
 
-    # Run the retriever to obtain context for the prompt.
-    context = run_retriever(question, full_context_chunks, retriever_model_name, use_gpu_if_available=use_gpu_if_available, top_n=top_k_for_retriever)
-
-    # Assemble the prompt for the generator.
-    prompt = assemble_prompt(context, question)
-    # prompt = "Andrew's favorite color is violet. What is Andrew's favorite color?"
+    # Otherwise, just use the question as the prompt:
+    else:
+        prompt = question
 
     # Run the generator with the provided prompt.
     response = run_generator(prompt, generator_model_name, use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample)
