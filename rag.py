@@ -100,7 +100,7 @@ def assemble_prompt(context, question):
         return question
 
     # Combine context and question into a single prompt.
-    prompt = f"Context: {context}\nQuestion: {question}\nAnswer: "
+    prompt = f"Context: {" ".join(context)}\nQuestion: {question}\nAnswer: "
 
     return prompt
 
@@ -125,7 +125,10 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
     model = AutoModelForCausalLM.from_pretrained(model_name, quantization_config=quant_config).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    # Encode the input into numerical interget token IDs (input_ids attribute).
+    # Ensure that the padding tokens are treated as end-of-sequence tokens, which can help in generating more coherent responses and managing attention masks correctly. If things are slow, try commenting out the next line.
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    # Encode the input into numerical interget token IDs (input_ids attribute). Copilot thinks it better to use this __call__ method instead of the specific encode method.
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
 
     # Determine the context to use for mixed precision.
