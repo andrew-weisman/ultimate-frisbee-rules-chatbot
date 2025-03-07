@@ -5,14 +5,42 @@ import contextlib
 import gc
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
+import logging
+import streamlit as st
+import datetime
+
+
+# Create handlers for logging.
+class PrintHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        print(log_entry)
+class StreamlitHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        st.write(log_entry)
+
+# Configure logging including these custom handlers.
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+log_filename = f"logs_{timestamp}.log"
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[
+                        logging.FileHandler(log_filename, mode='w'),  # log to file with timestamp
+                        PrintHandler(),
+                        # StreamlitHandler(),
+                        ])
 
 
 # Load the rules from a text file into a string.
 def load_rules_from_file_to_string(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        rules_text = file.read()
-    return rules_text
-
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            rules_text = file.read()
+        return rules_text
+    except Exception as e:
+        logging.error(f"Error loading rules from file: {e}")
+        return ""
 
 # Get a list of non-blank lines from the rules.
 def preprocess_document(document):
@@ -22,14 +50,18 @@ def preprocess_document(document):
 
 
 # Run a retriever model from a provided question and full context.
-def run_retriever(question, chunks, model_name, top_n=5):
+def run_retriever(question, chunks, model_name, use_gpu_if_available=True, top_n=5):
 
     # If the question is None, return None.
     if question is None:
         return None
     
+    # Determine the device to use for running the retriever.
+    device = torch.device("cuda" if use_gpu_if_available and torch.cuda.is_available() else "cpu")
+    logging.info(f"For retrieval we are using the device: {device}.")
+
     # Initialize the model.
-    model = SentenceTransformer(model_name)
+    model = SentenceTransformer(model_name, device=device)
 
     # Encode the question into an embedding for the model.
     query_embedding = model.encode(question, convert_to_tensor=True)
@@ -51,6 +83,12 @@ def run_retriever(question, chunks, model_name, top_n=5):
 
     # Get the most relevant lines.
     context = [index[i] for i in relevant_indices]
+
+    # Clear memory appropriately.
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    else:
+        gc.collect()
 
     # Return the most relevant lines as context for the prompt.
     return context
@@ -76,21 +114,19 @@ def null_context():
 # Run a generator model from a provided prompt.
 def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision=False, load_in_4bit=False, max_new_tokens=10, num_return_sequences=1, temperature=0.3, top_k=5, do_sample=True):
 
+    # Determine the device to use for running the generator.
+    device = torch.device("cuda" if use_gpu_if_available and torch.cuda.is_available() else "cpu")
+    logging.info(f"For generation we are using the device: {device}.")
+
     # Configure the compute precision.
     quant_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16) if load_in_4bit else None
 
     # Load the pre-trained model and tokenizer.
-    model = AutoModelForCausalLM.from_pretrained(model_name, quantization_config=quant_config)
+    model = AutoModelForCausalLM.from_pretrained(model_name, quantization_config=quant_config).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # Encode the input into numerical interget token IDs (input_ids attribute).
-    inputs = tokenizer(prompt, return_tensors="pt")
-
-    # Move the model and its inputs to the desired device.
-    device = torch.device("cuda" if use_gpu_if_available and torch.cuda.is_available() else "cpu")
-    model.to(device)
-    inputs.to(device)
-    print(f"For generation we are using the device: {device}.")
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
 
     # Determine the context to use for mixed precision.
     context_to_use = torch.autocast("cuda") if mixed_precision and device.type == "cuda" else null_context()
@@ -152,7 +188,7 @@ def main():
     full_context_chunks = preprocess_document(rules_text)
 
     # Run the retriever to obtain context for the prompt.
-    context = run_retriever(question, full_context_chunks, retriever_model_name, top_n=top_k_for_retriever)
+    context = run_retriever(question, full_context_chunks, retriever_model_name, use_gpu_if_available=use_gpu_if_available, top_n=top_k_for_retriever)
 
     # Assemble the prompt for the generator.
     prompt = assemble_prompt(context, question)
@@ -162,7 +198,7 @@ def main():
     response = run_generator(prompt, generator_model_name, use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample)
 
     # Print the generator's response.
-    print(response)
+    logging.info(response)
 
 
 # Execute the main function.
