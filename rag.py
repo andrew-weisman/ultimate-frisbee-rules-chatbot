@@ -171,7 +171,10 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
         )
 
     # Decode the model output from the output token IDs to text.
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    response = "---\n"
+    for ireturn_sequence in range(num_return_sequences):
+        response += tokenizer.decode(outputs[ireturn_sequence], skip_special_tokens=True)
+        response += "---\n"
 
     # Clear memory appropriately.
     del model, tokenizer, inputs, outputs  # delete objects to free memory
@@ -202,8 +205,9 @@ def main():
     use_gpu_if_available = True
     mixed_precision = False
     load_in_4bit = False
-    max_new_tokens = 10
-    num_return_sequences = 1
+    # max_new_tokens = 10
+    max_new_tokens = None
+    num_return_sequences = 10
     temperature = 0.3
     top_k_for_generator = 5
     do_sample = True
