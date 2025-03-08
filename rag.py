@@ -1,6 +1,6 @@
 # Import the necessary libraries.
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoModelForSeq2SeqLM, RagTokenizer, RagSequenceForGeneration
 import contextlib
 import gc
 import numpy as np
@@ -136,7 +136,7 @@ def null_context():
 
 
 # Run a generator model from a provided prompt.
-def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision=False, load_in_4bit=False, max_new_tokens=10, num_return_sequences=1, temperature=0.3, top_k=5, do_sample=True):
+def run_generator(prompt, generator_model, use_gpu_if_available=True, mixed_precision=False, load_in_4bit=False, max_new_tokens=10, num_return_sequences=1, temperature=0.3, top_k=5, do_sample=True):
 
     # Determine the device to use for running the generator.
     device = get_desired_computation_device(computation_name="generation", use_gpu_if_available=use_gpu_if_available)
@@ -145,8 +145,11 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
     quant_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16) if load_in_4bit else None
 
     # Load the pre-trained model and tokenizer.
-    model = AutoModelForCausalLM.from_pretrained(model_name, quantization_config=quant_config).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    generator_class = generator_model['generator_class']
+    tokenizer_class = generator_model['tokenizer_class']
+    model_name = generator_model['model_name']
+    model = generator_class.from_pretrained(model_name, quantization_config=quant_config).to(device)
+    tokenizer = tokenizer_class.from_pretrained(model_name)
 
     # Ensure that the padding tokens are treated as end-of-sequence tokens, which can help in generating more coherent responses and managing attention masks correctly. If things are slow, try commenting out the next line.
     tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -195,9 +198,11 @@ def main():
     do_augmentation = False
     rules_filename = "ultimate_frisbee_rules-manual_copy_from_website-edited.txt"
     # question = "Andrew's favorite color is violet. What is Andrew's favorite color?"
+    # question = "Andrew's favorite color is violet. What is Laura's favorite color?"
+    question = "Andrew's favorite color is violet and Laura's favorite color is green. What is Laura's favorite color?"
     # question = "Andrew's favorite color is violet. What color does Andrew like?"
     # question = "Andrew likes violet. What is his favorite color?"
-    question = "Andrew's favorite color is violet. Based on this information, what is his favorite color?"
+    # question = "Andrew's favorite color is violet. Based on this information, what is his favorite color?"
     # question = "Write me a poem about my dog Tessa."
     # question = "Explain the timeout rules"
     # question = "What is the stall count?"
@@ -208,14 +213,16 @@ def main():
     # generator_model_name = 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B'  # works, best deepseek model I can get working
     # generator_model_name = 'facebook/bart-large-cnn'  # terrible
     # generator_model_name = 'facebook/bart-large-mnli'  # terrible
-    generator_model_name = 'facebook/rag-token-nq'
+    # generator_model_name = "facebook/bart-large"
+    # generator_model_name = "t5-large"
+    generator_model = dict(generator_class=RagSequenceForGeneration, tokenizer_class=RagTokenizer, model_name="facebook/rag-sequence-base")
     top_k_for_retriever = 5
     use_gpu_if_available = True
     mixed_precision = False
     load_in_4bit = False
     # max_new_tokens = 10
-    max_new_tokens = 50
-    # max_new_tokens = None
+    # max_new_tokens = 50
+    max_new_tokens = None
     # num_return_sequences = 10
     num_return_sequences = 1
     # temperature = 0.3
@@ -245,7 +252,7 @@ def main():
         prompt = question
 
     # Run the generator with the provided prompt.
-    responses = run_function(run_generator, args=(prompt, generator_model_name), kwargs=dict(use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample))
+    responses = run_function(run_generator, args=(prompt, generator_model), kwargs=dict(use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample))
 
     # Print the generator's response.
     logging.info(responses)
