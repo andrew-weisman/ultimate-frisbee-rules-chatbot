@@ -33,6 +33,19 @@ logging.basicConfig(level=logging.DEBUG,
                         ])
 
 
+# Define a function to get the desired computation device.
+def get_desired_computation_device(computation_name="computation", use_gpu_if_available=True):
+    if use_gpu_if_available and torch.cuda.is_available():
+        device_index = torch.cuda.current_device()
+        device = torch.device(f"cuda:{device_index}")
+        device_name = torch.cuda.get_device_name(device_index)
+    else:
+        device = torch.device("cpu")
+        device_name = "CPU"
+    logging.info(f"For {computation_name} we are using the device: {device_name}.")
+    return device
+
+
 # Define a function to run, log, and benchmark an arbitrary function.
 def run_function(function, args=(), kwargs={}):
     logging.info(f">>>> Running function: {function.__name__}...")
@@ -68,8 +81,7 @@ def run_retriever(question, chunks, model_name, use_gpu_if_available=True, top_n
         return None
     
     # Determine the device to use for running the retriever.
-    device = torch.device("cuda" if use_gpu_if_available and torch.cuda.is_available() else "cpu")
-    logging.info(f"For retrieval we are using the device: {device}.")
+    device = get_desired_computation_device(computation_name="retrieval", use_gpu_if_available=use_gpu_if_available)
 
     # Initialize the model.
     model = SentenceTransformer(model_name, device=device)
@@ -96,6 +108,7 @@ def run_retriever(question, chunks, model_name, use_gpu_if_available=True, top_n
     context = [index[i] for i in relevant_indices]
 
     # Clear memory appropriately.
+    del model, query_embedding, chunk_embeddings, similarities  # delete objects to free memory
     if device.type == "cuda":
         torch.cuda.empty_cache()
     else:
@@ -125,8 +138,7 @@ def null_context():
 def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision=False, load_in_4bit=False, max_new_tokens=10, num_return_sequences=1, temperature=0.3, top_k=5, do_sample=True):
 
     # Determine the device to use for running the generator.
-    device = torch.device("cuda" if use_gpu_if_available and torch.cuda.is_available() else "cpu")
-    logging.info(f"For generation we are using the device: {device}.")
+    device = get_desired_computation_device(computation_name="generation", use_gpu_if_available=use_gpu_if_available)
 
     # Configure the compute precision.
     quant_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16) if load_in_4bit else None
@@ -161,6 +173,7 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Clear memory appropriately.
+    del model, tokenizer, inputs, outputs  # delete objects to free memory
     if device.type == "cuda":
         torch.cuda.empty_cache()
     else:
