@@ -8,6 +8,7 @@ from sentence_transformers import SentenceTransformer, util
 import logging
 import streamlit as st
 from datetime import datetime
+import time
 
 
 # Create handlers for logging.
@@ -30,6 +31,15 @@ logging.basicConfig(level=logging.INFO,
                         PrintHandler(),
                         # StreamlitHandler(),
                         ])
+
+
+# Define a function to run, log, and benchmark an arbitrary function.
+def run_function(function, args=(), kwargs={}):
+    logging.info(f">>>> Running function: {function.__name__}...")
+    start_time = time.time()
+    return_value = function(*args, **kwargs)
+    logging.info(f"<<<< Function {function.__name__} completed in {time.time() - start_time:.2f} seconds.")
+    return return_value
 
 
 # Load the rules from a text file into a string.
@@ -188,23 +198,23 @@ def main():
     if do_augmentation:
     
         # Load the rules from a text file into a string.
-        rules_text = load_rules_from_file_to_string(rules_filename)
+        rules_text = run_function(load_rules_from_file_to_string, args=(rules_filename,))
 
         # Get a list of non-blank lines from the rules.
-        full_context_chunks = preprocess_document(rules_text)
+        full_context_chunks = run_function(preprocess_document, args=(rules_text,))
 
         # Run the retriever to obtain context for the prompt.
-        context = run_retriever(question, full_context_chunks, retriever_model_name, use_gpu_if_available=use_gpu_if_available, top_n=top_k_for_retriever)
+        context = run_function(run_retriever, args=(question, full_context_chunks, retriever_model_name), kwargs=dict(use_gpu_if_available=use_gpu_if_available, top_n=top_k_for_retriever))
 
         # Assemble the prompt for the generator.
-        prompt = assemble_prompt(context, question)
+        prompt = run_function(assemble_prompt, args=(context, question))
 
     # Otherwise, just use the question as the prompt:
     else:
         prompt = question
 
     # Run the generator with the provided prompt.
-    response = run_generator(prompt, generator_model_name, use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample)
+    response = run_function(run_generator, args=(prompt, generator_model_name), kwargs=dict(use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample))
 
     # Print the generator's response.
     logging.info(response)
