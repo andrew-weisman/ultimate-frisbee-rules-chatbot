@@ -24,13 +24,14 @@ class StreamlitHandler(logging.Handler):
 # Configure logging including these custom handlers.
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_filename = f"logs_{timestamp}.log"
-logging.basicConfig(level=logging.DEBUG,
-                    format='LOGGER: %(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    handlers=[
-                        logging.FileHandler(log_filename, mode='w'),  # log to file with timestamp
-                        PrintHandler(),
-                        # StreamlitHandler(),
-                        ])
+if not logging.getLogger().hasHandlers():  # Check if handlers are already configured to avoid adding multiple handlers.
+    logging.basicConfig(level=logging.DEBUG,
+                        format='LOGGER: %(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        handlers=[
+                            logging.FileHandler(log_filename, mode='w'),  # log to file with timestamp
+                            PrintHandler(),
+                            # StreamlitHandler(),
+                            ])
 
 
 # Define a function to get the desired computation device.
