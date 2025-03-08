@@ -215,10 +215,11 @@ def main():
     # generator_model_name = 'facebook/bart-large-mnli'  # terrible
     # generator_model_name = "facebook/bart-large"
     # generator_model_name = "t5-large"
-    generator_model = dict(generator_class=RagSequenceForGeneration, tokenizer_class=RagTokenizer, model_name="facebook/rag-sequence-base")
+    # generator_model = dict(generator_class=RagSequenceForGeneration, tokenizer_class=RagTokenizer, model_name="facebook/rag-sequence-base")
+    generator_model = dict(generator_class=AutoModelForCausalLM, tokenizer_class=AutoTokenizer, model_name="deepseek-ai/deepseek-llm-7b-base")
     top_k_for_retriever = 5
     use_gpu_if_available = True
-    mixed_precision = False
+    mixed_precision = True
     load_in_4bit = False
     # max_new_tokens = 10
     # max_new_tokens = 50

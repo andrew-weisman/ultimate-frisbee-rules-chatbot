@@ -1,0 +1,140 @@
+why does:
+
+from transformers import RagTokenizer, RagSequenceForGeneration
+import torch
+
+# Determine the device to use for running the generator.
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model_name = "facebook/rag-sequence-base"
+model = RagSequenceForGeneration.from_pretrained(model_name).to(device)
+tokenizer = RagTokenizer.from_pretrained(model_name)
+
+# Example input
+question = "What is Andrew's favorite color?"
+inputs = tokenizer(question, return_tensors="pt").to(device)
+
+# Manually set the context
+context = "Andrew's favorite color is blue."
+context_inputs = tokenizer(context, return_tensors="pt").to(device)
+
+# Generate the answer
+outputs = model.generate(
+    input_ids=inputs.input_ids,
+    context_input_ids=context_inputs.input_ids.repeat(inputs.input_ids.size(0), 1),
+    context_attention_mask=context_inputs.attention_mask.repeat(inputs.input_ids.size(0), 1),
+    max_new_tokens=50,
+    num_return_sequences=1,
+    temperature=None,
+    top_k=None,
+    do_sample=False,
+)
+
+# Decode the model output
+response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+# Clear memory appropriately.
+del model, tokenizer, inputs, context_inputs, outputs  # delete objects to free memory
+torch.cuda.empty_cache()
+
+print(response)
+
+give me:
+
+---------------------------------------------------------------------------
+AssertionError                            Traceback (most recent call last)
+Cell In[1], line 20
+     17 context_inputs = tokenizer(context, return_tensors="pt").to(device)
+     19 # Generate the answer
+---> 20 outputs = model.generate(
+     21     input_ids=inputs.input_ids,
+     22     context_input_ids=context_inputs.input_ids.repeat(inputs.input_ids.size(0), 1),
+     23     context_attention_mask=context_inputs.attention_mask.repeat(inputs.input_ids.size(0), 1),
+     24     max_new_tokens=50,
+     25     num_return_sequences=1,
+     26     temperature=None,
+     27     top_k=None,
+     28     do_sample=False,
+     29 )
+     31 # Decode the model output
+     32 response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/torch/utils/_contextlib.py:116, in context_decorator.<locals>.decorate_context(*args, **kwargs)
+    113 @functools.wraps(func)
+    114 def decorate_context(*args, **kwargs):
+    115     with ctx_factory():
+--> 116         return func(*args, **kwargs)
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/transformers/models/rag/modeling_rag.py:1019, in RagSequenceForGeneration.generate(self, input_ids, attention_mask, context_input_ids, context_attention_mask, doc_scores, do_deduplication, num_return_sequences, num_beams, n_docs, **model_kwargs)
+   1017 if input_ids is not None:
+   1018     new_input_ids = input_ids[index : index + 1].repeat(num_candidates, 1)
+-> 1019     outputs = self(new_input_ids, labels=output_sequences, exclude_bos_score=True)
+   1020 else:  # input_ids is None, need context_input_ids/mask and doc_scores
+   1021     assert context_attention_mask is not None, (
+   1022         "Make sure that `context_attention_mask` are passed, if no `input_ids` is set. Alternatively, you"
+   1023         " can set a retriever using the `set_retriever(...)` function."
+   1024     )
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/torch/nn/modules/module.py:1739, in Module._wrapped_call_impl(self, *args, **kwargs)
+   1737     return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]
+   1738 else:
+-> 1739     return self._call_impl(*args, **kwargs)
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/torch/nn/modules/module.py:1750, in Module._call_impl(self, *args, **kwargs)
+   1745 # If we don't have any hooks, we want to skip the rest of the logic in
+   1746 # this function, and just call forward.
+   1747 if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks or self._forward_pre_hooks
+   1748         or _global_backward_pre_hooks or _global_backward_hooks
+   1749         or _global_forward_hooks or _global_forward_pre_hooks):
+-> 1750     return forward_call(*args, **kwargs)
+   1752 result = None
+   1753 called_always_called_hooks = set()
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/transformers/models/rag/modeling_rag.py:843, in RagSequenceForGeneration.forward(self, input_ids, attention_mask, encoder_outputs, decoder_input_ids, decoder_attention_mask, past_key_values, context_input_ids, context_attention_mask, doc_scores, use_cache, output_attentions, output_hidden_states, output_retrieved, exclude_bos_score, reduce_loss, labels, n_docs, **kwargs)
+    840         decoder_input_ids = labels
+    841     use_cache = False
+--> 843 outputs = self.rag(
+    844     input_ids=input_ids,
+    845     attention_mask=attention_mask,
+    846     encoder_outputs=encoder_outputs,
+    847     decoder_input_ids=decoder_input_ids,
+    848     decoder_attention_mask=decoder_attention_mask,
+    849     context_input_ids=context_input_ids,
+    850     context_attention_mask=context_attention_mask,
+    851     doc_scores=doc_scores,
+    852     past_key_values=past_key_values,
+    853     use_cache=use_cache,
+    854     output_attentions=output_attentions,
+    855     output_hidden_states=output_hidden_states,
+    856     output_retrieved=output_retrieved,
+    857     n_docs=n_docs,
+    858 )
+    860 loss = None
+    861 if labels is not None:
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/torch/nn/modules/module.py:1739, in Module._wrapped_call_impl(self, *args, **kwargs)
+   1737     return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]
+   1738 else:
+-> 1739     return self._call_impl(*args, **kwargs)
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/torch/nn/modules/module.py:1750, in Module._call_impl(self, *args, **kwargs)
+   1745 # If we don't have any hooks, we want to skip the rest of the logic in
+   1746 # this function, and just call forward.
+   1747 if not (self._backward_hooks or self._backward_pre_hooks or self._forward_hooks or self._forward_pre_hooks
+   1748         or _global_backward_pre_hooks or _global_backward_hooks
+   1749         or _global_forward_hooks or _global_forward_pre_hooks):
+-> 1750     return forward_call(*args, **kwargs)
+   1752 result = None
+   1753 called_always_called_hooks = set()
+
+File ~/miniconda3/envs/conda_env-2025-03-03/lib/python3.12/site-packages/transformers/models/rag/modeling_rag.py:650, in RagModel.forward(self, input_ids, attention_mask, encoder_outputs, decoder_input_ids, decoder_attention_mask, past_key_values, doc_scores, context_input_ids, context_attention_mask, use_cache, output_attentions, output_hidden_states, output_retrieved, n_docs)
+    646         doc_scores = torch.bmm(
+    647             question_encoder_last_hidden_state.unsqueeze(1), retrieved_doc_embeds.transpose(1, 2)
+    648         ).squeeze(1)
+    649 else:
+--> 650     assert context_input_ids is not None, (
+    651         "Make sure that `context_input_ids` are passed, if no `retriever` is set. Alternatively, you can"
+    652         " set a retriever using the `set_retriever(...)` function."
+    653     )
+
+AssertionError: Make sure that `context_input_ids` are passed, if no `retriever` is set. Alternatively, you can set a retriever using the `set_retriever(...)` function.
