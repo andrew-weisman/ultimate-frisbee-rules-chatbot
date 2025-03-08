@@ -24,8 +24,8 @@ class StreamlitHandler(logging.Handler):
 # Configure logging including these custom handlers.
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_filename = f"logs_{timestamp}.log"
-logging.basicConfig(level=logging.INFO, 
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+logging.basicConfig(level=logging.DEBUG,
+                    format='LOGGER: %(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[
                         logging.FileHandler(log_filename, mode='w'),  # log to file with timestamp
                         PrintHandler(),
@@ -151,7 +151,7 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
             max_new_tokens=max_new_tokens,  # limit the number of new tokens generated
             num_return_sequences=num_return_sequences,
             pad_token_id=tokenizer.eos_token_id,
-            attention_mask=inputs.ne(tokenizer.pad_token_id).long(),  # specify the attention mask
+            attention_mask=inputs["input_ids"].ne(tokenizer.pad_token_id).long(),  # specify the attention mask
             temperature=temperature,  # lower temperature for more deterministic output
             top_k=top_k,  # limit the number of possible next tokens
             do_sample=do_sample,  # enable sampling
