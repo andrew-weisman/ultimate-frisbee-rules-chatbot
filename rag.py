@@ -171,10 +171,11 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
         )
 
     # Decode the model output from the output token IDs to text.
-    response = "---\n"
+    responses = "\n---\n"
     for ireturn_sequence in range(num_return_sequences):
-        response += tokenizer.decode(outputs[ireturn_sequence], skip_special_tokens=True)
-        response += "---\n"
+        responses += f"Response {ireturn_sequence + 1}:\n"
+        responses += tokenizer.decode(outputs[ireturn_sequence], skip_special_tokens=True)
+        responses += "\n---\n"
 
     # Clear memory appropriately.
     del model, tokenizer, inputs, outputs  # delete objects to free memory
@@ -184,7 +185,7 @@ def run_generator(prompt, model_name, use_gpu_if_available=True, mixed_precision
         gc.collect()
 
     # Return the response.
-    return response
+    return responses
 
 
 # Define the main function.
@@ -197,8 +198,8 @@ def main():
     # question = "Explain the timeout rules"
     # question = "What is the stall count?"
     retriever_model_name = 'all-MiniLM-L6-v2'
-    generator_model_name = 'gpt2'
-    # generator_model_name = 'gpt2-xl'  # this is the largest GPT-2 model from OpenAI and is open source
+    # generator_model_name = 'gpt2'
+    generator_model_name = 'gpt2-xl'  # this is the largest GPT-2 model from OpenAI and is open source
     # generator_model_name = "EleutherAI/gpt-neo-2.7B"  # best GPT-related model for my laptop
     # generator_model_name = 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B'  # works, best deepseek model I can get working
     top_k_for_retriever = 5
@@ -232,10 +233,10 @@ def main():
         prompt = question
 
     # Run the generator with the provided prompt.
-    response = run_function(run_generator, args=(prompt, generator_model_name), kwargs=dict(use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample))
+    responses = run_function(run_generator, args=(prompt, generator_model_name), kwargs=dict(use_gpu_if_available=use_gpu_if_available, mixed_precision=mixed_precision, load_in_4bit=load_in_4bit, max_new_tokens=max_new_tokens, num_return_sequences=num_return_sequences, temperature=temperature, top_k=top_k_for_generator, do_sample=do_sample))
 
     # Print the generator's response.
-    logging.info(response)
+    logging.info(responses)
 
 
 # Execute the main function.
