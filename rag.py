@@ -194,24 +194,36 @@ def main():
     # Parameters.
     do_augmentation = False
     rules_filename = "ultimate_frisbee_rules-manual_copy_from_website-edited.txt"
-    question = "Andrew's favorite color is violet. What is Andrew's favorite color?"
+    # question = "Andrew's favorite color is violet. What is Andrew's favorite color?"
+    # question = "Andrew's favorite color is violet. What color does Andrew like?"
+    # question = "Andrew likes violet. What is his favorite color?"
+    question = "Andrew's favorite color is violet. Based on this information, what is his favorite color?"
+    # question = "Write me a poem about my dog Tessa."
     # question = "Explain the timeout rules"
     # question = "What is the stall count?"
     retriever_model_name = 'all-MiniLM-L6-v2'
     # generator_model_name = 'gpt2'
-    generator_model_name = 'gpt2-xl'  # this is the largest GPT-2 model from OpenAI and is open source
+    # generator_model_name = 'gpt2-xl'  # this is the largest GPT-2 model from OpenAI and is open source
     # generator_model_name = "EleutherAI/gpt-neo-2.7B"  # best GPT-related model for my laptop
     # generator_model_name = 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B'  # works, best deepseek model I can get working
+    # generator_model_name = 'facebook/bart-large-cnn'  # terrible
+    # generator_model_name = 'facebook/bart-large-mnli'  # terrible
+    generator_model_name = 'facebook/rag-token-nq'
     top_k_for_retriever = 5
     use_gpu_if_available = True
     mixed_precision = False
     load_in_4bit = False
     # max_new_tokens = 10
-    max_new_tokens = None
-    num_return_sequences = 10
-    temperature = 0.3
-    top_k_for_generator = 5
-    do_sample = True
+    max_new_tokens = 50
+    # max_new_tokens = None
+    # num_return_sequences = 10
+    num_return_sequences = 1
+    # temperature = 0.3
+    # temperature = 0.1
+    temperature = None
+    # top_k_for_generator = 5
+    top_k_for_generator = None
+    do_sample = False
 
     # If we want to create a RAG and therefore include relevant context in the prompt...
     if do_augmentation:
