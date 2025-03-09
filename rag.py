@@ -197,9 +197,9 @@ def main():
     # Parameters.
     do_augmentation = False
     rules_filename = "ultimate_frisbee_rules-manual_copy_from_website-edited.txt"
-    # question = "Andrew's favorite color is violet. What is Andrew's favorite color?"
+    question = "Andrew's favorite color is violet. What is Andrew's favorite color?"
     # question = "Andrew's favorite color is violet. What is Laura's favorite color?"
-    question = "Andrew's favorite color is violet and Laura's favorite color is green. What is Laura's favorite color?"
+    # question = "Andrew's favorite color is violet and Laura's favorite color is green. What is Laura's favorite color?"
     # question = "Andrew's favorite color is violet. What color does Andrew like?"
     # question = "Andrew likes violet. What is his favorite color?"
     # question = "Andrew's favorite color is violet. Based on this information, what is his favorite color?"
@@ -216,22 +216,26 @@ def main():
     # generator_model_name = "facebook/bart-large"
     # generator_model_name = "t5-large"
     # generator_model = dict(generator_class=RagSequenceForGeneration, tokenizer_class=RagTokenizer, model_name="facebook/rag-sequence-base")
-    generator_model = dict(generator_class=AutoModelForCausalLM, tokenizer_class=AutoTokenizer, model_name="deepseek-ai/deepseek-llm-7b-base")
+    generator_model = dict(generator_class=AutoModelForCausalLM, tokenizer_class=AutoTokenizer, model_name="gpt2")
+    # generator_model = dict(generator_class=AutoModelForCausalLM, tokenizer_class=AutoTokenizer, model_name="gpt2-xl")
+    # generator_model = dict(generator_class=AutoModelForCausalLM, tokenizer_class=AutoTokenizer, model_name="EleutherAI/gpt-neo-2.7B")
+    # generator_model = dict(generator_class=AutoModelForCausalLM, tokenizer_class=AutoTokenizer, model_name='deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B')
+    # generator_model = dict(generator_class=AutoModelForCausalLM, tokenizer_class=AutoTokenizer, model_name="deepseek-ai/deepseek-llm-7b-base")
     top_k_for_retriever = 5
     use_gpu_if_available = True
-    mixed_precision = True
+    mixed_precision = False
     load_in_4bit = False
     # max_new_tokens = 10
-    # max_new_tokens = 50
-    max_new_tokens = None
-    # num_return_sequences = 10
-    num_return_sequences = 1
-    # temperature = 0.3
+    max_new_tokens = 1
+    # max_new_tokens = None
+    num_return_sequences = 10
+    # num_return_sequences = 1
+    temperature = 0.3
     # temperature = 0.1
-    temperature = None
-    # top_k_for_generator = 5
-    top_k_for_generator = None
-    do_sample = False
+    # temperature = None
+    top_k_for_generator = 5
+    # top_k_for_generator = None
+    do_sample = True
 
     # If we want to create a RAG and therefore include relevant context in the prompt...
     if do_augmentation:
